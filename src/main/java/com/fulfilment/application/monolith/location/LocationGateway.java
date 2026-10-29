@@ -2,12 +2,16 @@ package com.fulfilment.application.monolith.location;
 
 import com.fulfilment.application.monolith.warehouses.domain.models.Location;
 import com.fulfilment.application.monolith.warehouses.domain.ports.LocationResolver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class LocationGateway implements LocationResolver {
 
   private static final List<Location> locations = new ArrayList<>();
+  private static final Logger log = LoggerFactory.getLogger(LocationGateway.class);
 
   static {
     locations.add(new Location("ZWOLLE-001", 1, 40));
@@ -22,7 +26,11 @@ public class LocationGateway implements LocationResolver {
 
   @Override
   public Location resolveByIdentifier(String identifier) {
-    // TODO implement this method
-    throw new UnsupportedOperationException("Unimplemented method 'resolveByIdentifier'");
+    log.info("identifier: {}", identifier);
+
+    return locations.stream()
+            .filter(location -> location.identification.equalsIgnoreCase(identifier))
+            .findFirst()
+            .orElse(null);
   }
 }
