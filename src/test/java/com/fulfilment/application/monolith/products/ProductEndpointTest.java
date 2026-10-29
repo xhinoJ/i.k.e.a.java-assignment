@@ -5,6 +5,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.core.IsNot.not;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 
 @QuarkusTest
@@ -22,15 +23,28 @@ public class ProductEndpointTest {
         .statusCode(200)
         .body(containsString("TONSTAD"), containsString("KALLAX"), containsString("BESTÅ"));
 
-    // Delete the TONSTAD:
-    given().when().delete(path + "/1").then().statusCode(204);
+    // Create a product so this test does not depend on (or destroy) the seeded data:
+    long id =
+        given()
+            .contentType(ContentType.JSON)
+            .body("{\"name\":\"PRODUCT-TO-DELETE\",\"stock\":1}")
+            .when()
+            .post(path)
+            .then()
+            .statusCode(201)
+            .extract()
+            .jsonPath()
+            .getLong("id");
 
-    // List all, TONSTAD should be missing now:
+    // Delete the created product:
+    given().when().delete(path + "/" + id).then().statusCode(204);
+
+    // List all, the created product should be missing now:
     given()
         .when()
         .get(path)
         .then()
         .statusCode(200)
-        .body(not(containsString("TONSTAD")), containsString("KALLAX"), containsString("BESTÅ"));
+        .body(not(containsString("PRODUCT-TO-DELETE")), containsString("TONSTAD"));
   }
 }
