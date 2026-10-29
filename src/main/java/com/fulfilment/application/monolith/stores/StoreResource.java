@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -27,6 +26,7 @@ import org.jboss.logging.Logger;
 @Consumes("application/json")
 public class StoreResource {
 
+  @Inject StoreService storeService;
   @Inject LegacyStoreManagerGateway legacyStoreManagerGateway;
 
   private static final Logger LOGGER = Logger.getLogger(StoreResource.class.getName());
@@ -47,36 +47,22 @@ public class StoreResource {
   }
 
   @POST
-  @Transactional
   public Response create(Store store) {
-    if (store.id != null) {
-      throw new WebApplicationException("Id was invalidly set on request.", 422);
-    }
+    Store created = storeService.create(store);
 
-    store.persist();
+    // The service method is the transaction boundary: when it returns, the
+    // store has been committed. Only then do we propagate it to the legacy system.
+    legacyStoreManagerGateway.createStoreOnLegacySystem(created);
 
-    legacyStoreManagerGateway.createStoreOnLegacySystem(store);
-
-    return Response.ok(store).status(201).build();
+    return Response.ok(created).status(201).build();
   }
 
   @PUT
   @Path("{id}")
-  @Transactional
   public Store update(Long id, Store updatedStore) {
-    if (updatedStore.name == null) {
-      throw new WebApplicationException("Store Name was not set on request.", 422);
-    }
+    Store entity = storeService.update(id, updatedStore);
 
-    Store entity = Store.findById(id);
-
-    if (entity == null) {
-      throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
-    }
-
-    entity.name = updatedStore.name;
-    entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
-
+    // Called after the service method (and therefore the transaction) completes.
     legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore);
 
     return entity;
@@ -84,26 +70,10 @@ public class StoreResource {
 
   @PATCH
   @Path("{id}")
-  @Transactional
   public Store patch(Long id, Store updatedStore) {
-    if (updatedStore.name == null) {
-      throw new WebApplicationException("Store Name was not set on request.", 422);
-    }
+    Store entity = storeService.patch(id, updatedStore);
 
-    Store entity = Store.findById(id);
-
-    if (entity == null) {
-      throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
-    }
-
-    if (entity.name != null) {
-      entity.name = updatedStore.name;
-    }
-
-    if (entity.quantityProductsInStock != 0) {
-      entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
-    }
-
+    // Called after the service method (and therefore the transaction) completes.
     legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore);
 
     return entity;
@@ -111,13 +81,8 @@ public class StoreResource {
 
   @DELETE
   @Path("{id}")
-  @Transactional
   public Response delete(Long id) {
-    Store entity = Store.findById(id);
-    if (entity == null) {
-      throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
-    }
-    entity.delete();
+    storeService.delete(id);
     return Response.status(204).build();
   }
 
