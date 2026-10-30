@@ -55,19 +55,20 @@ public class StoreResource {
   public Store update(Long id, Store updatedStore) {
     Store entity = storeService.update(id, updatedStore);
 
-    // Called after the service method (and therefore the transaction) completes.
-    legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore);
+    // The service method is the transaction boundary. Pass the persisted entity, not the
+    // request payload, so the legacy system always receives committed state.
+    legacyStoreManagerGateway.updateStoreOnLegacySystem(entity);
 
     return entity;
   }
 
   @PATCH
   @Path("{id}")
-  public Store patch(Long id, Store updatedStore) {
-    Store entity = storeService.patch(id, updatedStore);
+  public Store patch(Long id, StorePatchRequest request) {
+    Store entity = storeService.patch(id, request);
 
-    // Called after the service method (and therefore the transaction) completes.
-    legacyStoreManagerGateway.updateStoreOnLegacySystem(updatedStore);
+    // Same rule as update: propagate the committed entity, never the request payload.
+    legacyStoreManagerGateway.updateStoreOnLegacySystem(entity);
 
     return entity;
   }

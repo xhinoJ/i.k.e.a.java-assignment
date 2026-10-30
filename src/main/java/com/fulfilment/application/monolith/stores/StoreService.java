@@ -48,8 +48,8 @@ public class StoreService {
   }
 
   @Transactional
-  public Store patch(Long id, Store updatedStore) {
-    if (updatedStore.name == null) {
+  public Store patch(Long id, StorePatchRequest request) {
+    if (request == null || request.name == null) {
       throw new WebApplicationException("Store Name was not set on request.", 422);
     }
 
@@ -58,12 +58,12 @@ public class StoreService {
       throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
     }
 
-    if (entity.name != null) {
-      entity.name = updatedStore.name;
-    }
+    entity.name = request.name;
 
-    if (entity.quantityProductsInStock != 0) {
-      entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
+    // null means "not provided": leave the stored value untouched. An explicit 0 is a valid
+    // update, which is why the request field is a nullable Integer instead of a primitive int.
+    if (request.quantityProductsInStock != null) {
+      entity.quantityProductsInStock = request.quantityProductsInStock;
     }
 
     LOGGER.infof("Patched store id=%d name=%s", entity.id, entity.name);

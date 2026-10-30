@@ -69,6 +69,8 @@ public class ReplaceWarehouseUseCase implements ReplaceWarehouseOperation {
           422);
     }
 
+    validateLocationFeasibility(previous, newWarehouse, location);
+
     // A replacement archives the current warehouse and creates a new one with the same business
     // unit code. Both operations happen in the same transaction.
     warehouseStore.remove(previous);
@@ -80,5 +82,53 @@ public class ReplaceWarehouseUseCase implements ReplaceWarehouseOperation {
         newWarehouse.location,
         newWarehouse.capacity,
         newWarehouse.stock);
+  }
+
+  /**
+   * Applies the location feasibility rules to a replacement.
+   *
+   * <p>A replacement that keeps the warehouse in the same location only changes the capacity, so
+   * the previous capacity is subtracted before adding the new one. Moving to a different location
+   * is a genuine addition and must respect that location's warehouse count and capacity limits.
+   */
+  private void validateLocationFeasibility(
+      Warehouse previous, Warehouse newWarehouse, Location location) {
+    long usedCapacity = warehouseStore.sumCapacityByLocation(location.identification);
+    int previousCapacity = previous.capacity == null ? 0 : previous.capacity;
+
+    boolean sameLocation =
+        previous.location != null && previous.location.equalsIgnoreCase(location.identification);
+
+    if (!sameLocation) {
+      long warehousesAtLocation = warehouseStore.countByLocation(location.identification);
+      if (warehousesAtLocation >= location.maxNumberOfWarehouses) {
+        throw new WebApplicationException(
+            "Location "
+                + location.identification
+                + " already has the maximum number of warehouses ("
+                + location.maxNumberOfWarehouses
+                + ").",
+            422);
+      }
+    }
+
+    long capacityAfterReplacement =
+        sameLocation
+            ? usedCapacity - previousCapacity + newWarehouse.capacity
+            : usedCapacity + newWarehouse.capacity;
+
+    if (capacityAfterReplacement > location.maxCapacity) {
+      throw new WebApplicationException(
+          "Warehouse capacity of "
+              + newWarehouse.capacity
+              + " exceeds the remaining capacity of location "
+              + location.identification
+              + " (maximum "
+              + location.maxCapacity
+              + ", already used "
+              + (usedCapacity - (sameLocation ? previousCapacity : 0))
+              + ").",
+          422);
+    }
   }
 }

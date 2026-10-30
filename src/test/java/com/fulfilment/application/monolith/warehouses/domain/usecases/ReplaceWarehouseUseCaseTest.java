@@ -42,6 +42,90 @@ class ReplaceWarehouseUseCaseTest {
     when(warehouseStore.findByBusinessUnitCode("MWH.001")).thenReturn(previous);
     when(locationResolver.resolveByIdentifier("ZWOLLE-001"))
         .thenReturn(new Location("ZWOLLE-001", 1, 40));
+    when(warehouseStore.sumCapacityByLocation("ZWOLLE-001")).thenReturn(100L);
+
+    useCase.replace(replacement);
+
+    verify(warehouseStore).remove(previous);
+    verify(warehouseStore).create(replacement);
+  }
+
+  @Test
+  void rejectsReplacementWhenDestinationLocationIsFull() {
+    Warehouse previous = warehouse("MWH.001", "ZWOLLE-001", 100, 10);
+    Warehouse replacement = warehouse("MWH.001", "TILBURG-001", 20, 10);
+
+    when(warehouseStore.findByBusinessUnitCode("MWH.001")).thenReturn(previous);
+    when(locationResolver.resolveByIdentifier("TILBURG-001"))
+        .thenReturn(new Location("TILBURG-001", 1, 40));
+    when(warehouseStore.sumCapacityByLocation("TILBURG-001")).thenReturn(30L);
+    when(warehouseStore.countByLocation("TILBURG-001")).thenReturn(1L);
+
+    assertStatus(422, () -> useCase.replace(replacement));
+
+    verify(warehouseStore, never()).remove(any());
+    verify(warehouseStore, never()).create(any());
+  }
+
+  @Test
+  void rejectsReplacementWhenDestinationCapacityIsExceeded() {
+    Warehouse previous = warehouse("MWH.001", "ZWOLLE-001", 100, 10);
+    Warehouse replacement = warehouse("MWH.001", "TILBURG-001", 20, 10);
+
+    when(warehouseStore.findByBusinessUnitCode("MWH.001")).thenReturn(previous);
+    when(locationResolver.resolveByIdentifier("TILBURG-001"))
+        .thenReturn(new Location("TILBURG-001", 2, 40));
+    when(warehouseStore.sumCapacityByLocation("TILBURG-001")).thenReturn(30L);
+    when(warehouseStore.countByLocation("TILBURG-001")).thenReturn(0L);
+
+    assertStatus(422, () -> useCase.replace(replacement));
+
+    verify(warehouseStore, never()).remove(any());
+    verify(warehouseStore, never()).create(any());
+  }
+
+  @Test
+  void rejectsReplacementThatExceedsCapacityOfTheSameLocation() {
+    Warehouse previous = warehouse("MWH.001", "ZWOLLE-002", 20, 5);
+    Warehouse replacement = warehouse("MWH.001", "ZWOLLE-002", 60, 5);
+
+    when(warehouseStore.findByBusinessUnitCode("MWH.001")).thenReturn(previous);
+    when(locationResolver.resolveByIdentifier("ZWOLLE-002"))
+        .thenReturn(new Location("ZWOLLE-002", 2, 50));
+    when(warehouseStore.sumCapacityByLocation("ZWOLLE-002")).thenReturn(20L);
+
+    assertStatus(422, () -> useCase.replace(replacement));
+
+    verify(warehouseStore, never()).remove(any());
+    verify(warehouseStore, never()).create(any());
+  }
+
+  @Test
+  void allowsReplacementThatFitsWithinTheSameLocationCapacity() {
+    Warehouse previous = warehouse("MWH.001", "ZWOLLE-002", 20, 5);
+    Warehouse replacement = warehouse("MWH.001", "ZWOLLE-002", 40, 5);
+
+    when(warehouseStore.findByBusinessUnitCode("MWH.001")).thenReturn(previous);
+    when(locationResolver.resolveByIdentifier("ZWOLLE-002"))
+        .thenReturn(new Location("ZWOLLE-002", 2, 50));
+    when(warehouseStore.sumCapacityByLocation("ZWOLLE-002")).thenReturn(20L);
+
+    useCase.replace(replacement);
+
+    verify(warehouseStore).remove(previous);
+    verify(warehouseStore).create(replacement);
+  }
+
+  @Test
+  void allowsReplacementIntoLocationWithRoom() {
+    Warehouse previous = warehouse("MWH.001", "ZWOLLE-001", 100, 10);
+    Warehouse replacement = warehouse("MWH.001", "EINDHOVEN-001", 20, 10);
+
+    when(warehouseStore.findByBusinessUnitCode("MWH.001")).thenReturn(previous);
+    when(locationResolver.resolveByIdentifier("EINDHOVEN-001"))
+        .thenReturn(new Location("EINDHOVEN-001", 2, 70));
+    when(warehouseStore.sumCapacityByLocation("EINDHOVEN-001")).thenReturn(10L);
+    when(warehouseStore.countByLocation("EINDHOVEN-001")).thenReturn(0L);
 
     useCase.replace(replacement);
 

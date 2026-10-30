@@ -275,6 +275,32 @@ class WarehouseEndpointTest {
         .statusCode(422);
   }
 
+  @Test
+  void rejectsReplacementIntoLocationAtWarehouseLimit() {
+    // TILBURG-001 allows a single warehouse and already hosts MWH.023.
+    given()
+        .contentType(ContentType.JSON)
+        .body(body("MWH.001", "TILBURG-001", 20, 10))
+        .when()
+        .post(PATH + "/MWH.001/replacement")
+        .then()
+        .statusCode(422);
+  }
+
+  @Test
+  void rejectsReplacementThatExceedsLocationCapacity() {
+    createWarehouse("MWH.REPLACE-OVER", "ZWOLLE-002", 20, 5);
+
+    // ZWOLLE-002 allows 50 in total. Replacing the 20-capacity warehouse with 60 would exceed it.
+    given()
+        .contentType(ContentType.JSON)
+        .body(body("MWH.REPLACE-OVER", "ZWOLLE-002", 60, 5))
+        .when()
+        .post(PATH + "/MWH.REPLACE-OVER/replacement")
+        .then()
+        .statusCode(422);
+  }
+
   private String createWarehouse(String code, String location, int capacity, int stock) {
     return given()
         .contentType(ContentType.JSON)

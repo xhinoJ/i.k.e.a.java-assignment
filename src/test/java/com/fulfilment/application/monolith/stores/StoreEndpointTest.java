@@ -3,6 +3,7 @@ package com.fulfilment.application.monolith.stores;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
@@ -48,6 +49,23 @@ public class StoreEndpointTest {
         .post(PATH)
         .then()
         .statusCode(422);
+  }
+
+  @Test
+  public void testCreateDuplicateStoreNameReturnsConflict() {
+    createStore("STORE-DUPLICATE", 1);
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"name\":\"STORE-DUPLICATE\",\"quantityProductsInStock\":2}")
+        .when()
+        .post(PATH)
+        .then()
+        .statusCode(409)
+        .body("code", is(409))
+        .body("exceptionType", is("ConstraintViolationException"))
+        .body("error", is("Request conflicts with the current state of the resource."))
+        .body("error", not(containsString("ArcUndeclaredThrowableException")));
   }
 
   @Test
@@ -139,7 +157,36 @@ public class StoreEndpointTest {
   }
 
   @Test
-  public void testPatchKeepsStockWhenCurrentStockIsZero() {
+  public void testPatchKeepsStockWhenOnlyNameIsSent() {
+    long id = createStore("STORE-PATCH-NAME-ONLY", 7);
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"name\":\"STORE-PATCH-NAME-ONLY-UPDATED\"}")
+        .when()
+        .patch(PATH + "/" + id)
+        .then()
+        .statusCode(200)
+        .body("name", is("STORE-PATCH-NAME-ONLY-UPDATED"))
+        .body("quantityProductsInStock", is(7));
+  }
+
+  @Test
+  public void testPatchCanSetStockToZero() {
+    long id = createStore("STORE-PATCH-TO-ZERO", 7);
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"name\":\"STORE-PATCH-TO-ZERO\",\"quantityProductsInStock\":0}")
+        .when()
+        .patch(PATH + "/" + id)
+        .then()
+        .statusCode(200)
+        .body("quantityProductsInStock", is(0));
+  }
+
+  @Test
+  public void testPatchUpdatesStockWhenCurrentStockIsZero() {
     long id = createStore("STORE-PATCH-ZERO", 0);
 
     given()
@@ -150,7 +197,7 @@ public class StoreEndpointTest {
         .then()
         .statusCode(200)
         .body(containsString("STORE-PATCH-ZERO-UPDATED"))
-        .body("quantityProductsInStock", is(0));
+        .body("quantityProductsInStock", is(5));
   }
 
   @Test
