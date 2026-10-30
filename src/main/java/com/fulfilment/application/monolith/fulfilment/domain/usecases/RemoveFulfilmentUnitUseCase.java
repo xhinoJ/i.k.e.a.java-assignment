@@ -6,9 +6,12 @@ import com.fulfilment.application.monolith.fulfilment.domain.ports.RemoveFulfilm
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class RemoveFulfilmentUnitUseCase implements RemoveFulfilmentUnitOperation {
+
+  private static final Logger LOGGER = Logger.getLogger(RemoveFulfilmentUnitUseCase.class);
 
   private final FulfilmentUnitStore fulfilmentUnitStore;
 
@@ -26,5 +29,9 @@ public class RemoveFulfilmentUnitUseCase implements RemoveFulfilmentUnitOperatio
     }
 
     fulfilmentUnitStore.remove(unit);
+
+    LOGGER.infof(
+        "Removed fulfilment unit id=%d storeId=%d productId=%d warehouseId=%d",
+        unit.id, unit.storeId, unit.productId, unit.warehouseId);
   }
 }

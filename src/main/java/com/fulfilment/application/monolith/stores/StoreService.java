@@ -3,6 +3,7 @@ package com.fulfilment.application.monolith.stores;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
+import org.jboss.logging.Logger;
 
 /**
  * Transactional boundary for {@link Store} persistence.
@@ -14,6 +15,8 @@ import jakarta.ws.rs.WebApplicationException;
 @ApplicationScoped
 public class StoreService {
 
+  private static final Logger LOGGER = Logger.getLogger(StoreService.class);
+
   @Transactional
   public Store create(Store store) {
     if (store.id != null) {
@@ -21,6 +24,8 @@ public class StoreService {
     }
 
     store.persist();
+
+    LOGGER.infof("Created store id=%d name=%s", store.id, store.name);
     return store;
   }
 
@@ -38,6 +43,7 @@ public class StoreService {
     entity.name = updatedStore.name;
     entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
 
+    LOGGER.infof("Updated store id=%d name=%s", entity.id, entity.name);
     return entity;
   }
 
@@ -60,6 +66,7 @@ public class StoreService {
       entity.quantityProductsInStock = updatedStore.quantityProductsInStock;
     }
 
+    LOGGER.infof("Patched store id=%d name=%s", entity.id, entity.name);
     return entity;
   }
 
@@ -70,5 +77,7 @@ public class StoreService {
       throw new WebApplicationException("Store with id of " + id + " does not exist.", 404);
     }
     entity.delete();
+
+    LOGGER.infof("Deleted store id=%d name=%s", entity.id, entity.name);
   }
 }

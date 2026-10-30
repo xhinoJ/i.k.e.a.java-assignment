@@ -42,7 +42,14 @@ class WarehouseEndpointTest {
 
   @Test
   void returnsNotFoundForUnknownWarehouseId() {
-    given().when().get(PATH + "/999999").then().statusCode(404);
+    given()
+        .when()
+        .get(PATH + "/999999")
+        .then()
+        .statusCode(404)
+        .body("code", is(404))
+        .body("exceptionType", containsString("WebApplicationException"))
+        .body("error", containsString("999999"));
   }
 
   @Test

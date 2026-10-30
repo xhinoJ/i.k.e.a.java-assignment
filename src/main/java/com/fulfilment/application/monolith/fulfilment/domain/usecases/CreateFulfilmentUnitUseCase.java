@@ -9,9 +9,12 @@ import com.fulfilment.application.monolith.warehouses.domain.ports.WarehouseStor
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class CreateFulfilmentUnitUseCase implements CreateFulfilmentUnitOperation {
+
+  private static final Logger LOGGER = Logger.getLogger(CreateFulfilmentUnitUseCase.class);
 
   static final int MAX_WAREHOUSES_PER_PRODUCT_PER_STORE = 2;
   static final int MAX_WAREHOUSES_PER_STORE = 3;
@@ -101,7 +104,13 @@ public class CreateFulfilmentUnitUseCase implements CreateFulfilmentUnitOperatio
 
     // The database assigns the identifier; never trust one supplied by the client.
     unit.id = null;
-    return fulfilmentUnitStore.create(unit);
+    FulfilmentUnit created = fulfilmentUnitStore.create(unit);
+
+    LOGGER.infof(
+        "Created fulfilment unit id=%d storeId=%d productId=%d warehouseId=%d",
+        created.id, created.storeId, created.productId, created.warehouseId);
+
+    return created;
   }
 
   private void validateIds(FulfilmentUnit unit) {

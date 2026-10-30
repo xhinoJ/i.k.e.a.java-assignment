@@ -7,9 +7,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
 import java.time.LocalDateTime;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class ArchiveWarehouseUseCase implements ArchiveWarehouseOperation {
+
+  private static final Logger LOGGER = Logger.getLogger(ArchiveWarehouseUseCase.class);
 
   private final WarehouseStore warehouseStore;
 
@@ -26,5 +29,9 @@ public class ArchiveWarehouseUseCase implements ArchiveWarehouseOperation {
 
     warehouse.archivedAt = LocalDateTime.now();
     warehouseStore.update(warehouse);
+
+    LOGGER.infof(
+        "Archived warehouse businessUnitCode=%s location=%s",
+        warehouse.businessUnitCode, warehouse.location);
   }
 }

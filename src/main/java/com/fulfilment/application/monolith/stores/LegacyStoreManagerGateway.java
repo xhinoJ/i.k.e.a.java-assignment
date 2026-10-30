@@ -3,49 +3,47 @@ package com.fulfilment.application.monolith.stores;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class LegacyStoreManagerGateway {
 
+  private static final Logger LOGGER = Logger.getLogger(LegacyStoreManagerGateway.class);
+
   public void createStoreOnLegacySystem(Store store) {
-    // just to emulate as this would send this to a legacy system, let's write a temp file with the
+    // Emulates sending the store to a legacy system by writing a temporary payload file.
     writeToFile(store);
   }
 
   public void updateStoreOnLegacySystem(Store store) {
-    // just to emulate as this would send this to a legacy system, let's write a temp file with the
+    // Emulates sending the store to a legacy system by writing a temporary payload file.
     writeToFile(store);
   }
 
   private void writeToFile(Store store) {
     try {
-      // Step 1: Create a temporary file
-      Path tempFile;
+      Path tempFile = Files.createTempFile(filePrefix(store), ".txt");
+      LOGGER.debugf("Created temporary legacy payload file %s", tempFile);
 
-      tempFile = Files.createTempFile(store.name, ".txt");
-
-      System.out.println("Temporary file created at: " + tempFile.toString());
-
-      // Step 2: Write data to the temporary file
       String content =
           "Store created. [ name ="
               + store.name
               + " ] [ items on stock ="
               + store.quantityProductsInStock
               + "]";
-      Files.write(tempFile, content.getBytes());
-      System.out.println("Data written to temporary file.");
+      Files.writeString(tempFile, content);
 
-      // Step 3: Optionally, read the data back to verify
-      String readContent = new String(Files.readAllBytes(tempFile));
-      System.out.println("Data read from temporary file: " + readContent);
-
-      // Step 4: Delete the temporary file when done
       Files.delete(tempFile);
-      System.out.println("Temporary file deleted.");
-
+      LOGGER.debugf("Propagated store %s to the legacy system", store.name);
     } catch (Exception e) {
-      e.printStackTrace();
+      // The database transaction has already committed at this point; a legacy outage must not
+      // turn a successful store change into an error for the caller.
+      LOGGER.errorf(e, "Failed to propagate store %s to the legacy system", store.name);
     }
+  }
+
+  private String filePrefix(Store store) {
+    // Files.createTempFile requires a prefix of at least three characters.
+    return store.name == null || store.name.length() < 3 ? "store" : store.name;
   }
 }
