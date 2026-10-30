@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, test and coverage
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13.3
+        env:
+          POSTGRES_USER: quarkus_test
+          POSTGRES_PASSWORD: quarkus_test
+          POSTGRES_DB: quarkus_test
+        ports:
+          - 15432:5432
+        options: >-
+          --health-cmd "pg_isready -U quarkus_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build, test and enforce coverage
+        run: |
+          ./mvnw -B verify \
+            -Dquarkus.datasource.db-kind=postgresql \
+            -Dquarkus.datasource.username=quarkus_test \
+            -Dquarkus.datasource.password=quarkus_test \
+            -Dquarkus.datasource.jdbc.url=jdbc:postgresql://localhost:15432/quarkus_test \
+            -Dquarkus.datasource.devservices.enabled=false \
+            -Dquarkus.devservices.enabled=false
+
+      - name: Upload JaCoCo report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco
+          if-no-files-found: ignore
+          retention-days: 7

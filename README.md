@@ -85,3 +85,38 @@ Have fun, and join the team of contributors!
 ## Troubleshooting
 
 Using **IntelliJ**, in case the generated code is not recognized and you have compilation failures, you may need to add `target/.../jaxrs` folder as "generated sources".
+
+## Health checks
+
+SmallRye Health is enabled and the database readiness check is included:
+
+| Endpoint | Purpose |
+|---|---|
+| `/q/health` | Overall health |
+| `/q/health/live` | Liveness |
+| `/q/health/ready` | Readiness (includes the datasource check) |
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request to `main`:
+
+- JDK 21 with Maven dependency caching;
+- a PostgreSQL 13.3 service container on port `15432`;
+- `./mvnw verify`, which runs the tests, generates the JaCoCo report and enforces the 80% line
+  coverage threshold;
+- uploads `target/site/jacoco` as a build artifact.
+
+The same command can be run locally against a PostgreSQL instance:
+
+```sh
+./mvnw verify \
+  -Dquarkus.datasource.db-kind=postgresql \
+  -Dquarkus.datasource.username=quarkus_test \
+  -Dquarkus.datasource.password=quarkus_test \
+  -Dquarkus.datasource.jdbc.url=jdbc:postgresql://localhost:15432/quarkus_test \
+  -Dquarkus.datasource.devservices.enabled=false \
+  -Dquarkus.devservices.enabled=false
+```
+
+The coverage report is written to `target/site/jacoco/index.html`. Deployment is out of scope for
+this assignment; the pipeline covers build, tests and coverage only.
