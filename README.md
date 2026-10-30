@@ -1,5 +1,7 @@
 # Java Code Assignment
 
+[![CI](https://github.com/xhinoJ/i.k.e.a.java-assignment/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/xhinoJ/i.k.e.a.java-assignment/actions/workflows/ci.yml)
+
 This is a short code assignment that explores various aspects of software development, including API implementation, documentation, persistence layer handling, and testing.
 
 ## About the assignment
